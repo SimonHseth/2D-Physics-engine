@@ -1,5 +1,5 @@
 
-#pragma onece
+#pragma once
 
 class Vector2D {
     public:
@@ -12,6 +12,7 @@ class Vector2D {
     Vector2D operator-(const Vector2D& other) const;
     Vector2D operator*(float scalar) const;
     Vector2D& operator+=(const Vector2D& other);
+    Vector2D &operator-=(const Vector2D &other);
 
     float Magnitude() const;
     Vector2D Normalize() const;
