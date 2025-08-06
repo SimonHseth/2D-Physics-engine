@@ -7,8 +7,9 @@ class PhysicsWorld
 public:
     std::vector<RigidBody *> bodies;
     Vector2D gravity;
+    float worldWidth, worldHeight;
 
-    PhysicsWorld(Vector2D gravity = Vector2D(0, -9.8f));
+    PhysicsWorld(Vector2D gravity, float width, float height);
 
     void AddBody(RigidBody *body);
     void Step(float dt);
