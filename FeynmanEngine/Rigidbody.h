@@ -5,44 +5,32 @@
 class RigidBody
 {
 public:
-    Vector2D position;
-    Vector2D velocity;
-    float mass;
-    float invMass;
+    // Kinematics
+    Vector2D position{};
+    Vector2D velocity{};
+    Vector2D force{}; // <-- accumulate forces here
 
-    bool isKinematic = false; // for dragged objects (ignore physics forces)
+    // Mass
+    float mass{1.0f};
+    float invMass{1.0f};
 
-    // Circle-specific
-    float radius;
+    // Shape
+    ShapeType shapeType{ShapeType::Circle};
+    float radius{0.0f};        // for circles
+    Vector2D size{0.0f, 0.0f}; // for rectangles (width, height)
 
-    // Rectangle-specific
-    Vector2D size;
+    // Dragging
+    bool isKinematic{false};
 
-    ShapeType shapeType;
+    // Constructors (declarations only)
+    // Circle
+    RigidBody(Vector2D pos, float r, float m, ShapeType type = ShapeType::Circle);
+    // Rectangle by width/height
+    RigidBody(Vector2D pos, float width, float height, float m, ShapeType type = ShapeType::Rectangle);
+    // Rectangle by size vector (optional convenience)
+    RigidBody(Vector2D pos, Vector2D sz, float m, ShapeType type = ShapeType::Rectangle);
 
-    // Circle constructor
-    RigidBody(Vector2D pos, float r, float m)
-        : position(pos), velocity(0, 0), mass(m), radius(r), size(0, 0), shapeType(ShapeType::Circle)
-    {
-        invMass = (mass > 0) ? 1.0f / mass : 0.0f;
-    }
-
-    // Rectangle constructor
-    RigidBody(Vector2D pos, float width, float height, ShapeType type = ShapeType::Rectangle)
-        : position(pos), velocity(0, 0), mass(1.0f), radius(0), size(width, height), shapeType(type)
-    {
-        invMass = (mass > 0) ? 1.0f / mass : 0.0f;
-    }
-
-    void ApplyForce(const Vector2D &force)
-    {
-        Vector2D acceleration = force * invMass;
-        velocity += acceleration;
-    }
-
-    void Integrate(float dt)
-    {
-        position += velocity * dt;
-    }
+    // Forces/integration
+    void ApplyForce(const Vector2D &f);
+    void Integrate(float dt);
 };
-  

@@ -1,17 +1,42 @@
 #include "RigidBody.h"
 
-RigidBody::RigidBody(Vector2D pos, float rad, float m)
-    : position(pos), radius(rad), size(0, 0), mass(m), shapeType(ShapeType::Circle)
+// Circle
+RigidBody::RigidBody(Vector2D pos, float r, float m, ShapeType type)
 {
-    invMass = (m > 0) ? 1.0f / m : 0.0f;
-    velocity = force = Vector2D(0, 0);
+    position = pos;
+    radius = r;
+    mass = m;
+    shapeType = type; // should be Circle
+    size = Vector2D(0, 0);
+    invMass = (mass > 0.f) ? 1.0f / mass : 0.0f;
+    velocity = Vector2D(0, 0);
+    force = Vector2D(0, 0);
 }
 
-RigidBody::RigidBody(Vector2D pos, Vector2D sz, float m)
-    : position(pos), size(sz), radius(0), mass(m), shapeType(ShapeType::Rectangle)
+// Rectangle by width/height
+RigidBody::RigidBody(Vector2D pos, float width, float height, float m, ShapeType type)
 {
-    invMass = (m > 0) ? 1.0f / m : 0.0f;
-    velocity = force = Vector2D(0, 0);
+    position = pos;
+    size = Vector2D(width, height);
+    mass = m;
+    shapeType = type; // should be Rectangle
+    radius = 0.0f;
+    invMass = (mass > 0.f) ? 1.0f / mass : 0.0f;
+    velocity = Vector2D(0, 0);
+    force = Vector2D(0, 0);
+}
+
+// Rectangle by size vector
+RigidBody::RigidBody(Vector2D pos, Vector2D sz, float m, ShapeType type)
+{
+    position = pos;
+    size = sz;
+    mass = m;
+    shapeType = type; // Rectangle
+    radius = 0.0f;
+    invMass = (mass > 0.f) ? 1.0f / mass : 0.0f;
+    velocity = Vector2D(0, 0);
+    force = Vector2D(0, 0);
 }
 
 void RigidBody::ApplyForce(const Vector2D &f)
@@ -21,10 +46,13 @@ void RigidBody::ApplyForce(const Vector2D &f)
 
 void RigidBody::Integrate(float dt)
 {
-    if (invMass == 0)
+    if (isKinematic || invMass == 0.f)
+    {
+        force = Vector2D(0, 0);
         return;
-    Vector2D acceleration = force * invMass;
-    velocity += acceleration * dt;
+    }
+    const Vector2D a = force * invMass;
+    velocity += a * dt;
     position += velocity * dt;
     force = Vector2D(0, 0);
 }

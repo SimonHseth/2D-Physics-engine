@@ -1,4 +1,5 @@
 #include "PhysicsWorld.h"
+#include "ShapeType.h"
 #include <cmath>
 
 PhysicsWorld::PhysicsWorld(Vector2D gravity, float width, float height)
@@ -11,14 +12,17 @@ void PhysicsWorld::AddBody(RigidBody *body)
 
 void PhysicsWorld::Step(float dt)
 {
-    // Apply forces and integrate motion
-    if (!body->isKinematic)
+    // Forces + integrate
+    for (auto *body : bodies)
     {
-        body->ApplyForce(gravity * body->mass);
+        if (!body->isKinematic)
+        {
+            body->ApplyForce(gravity * body->mass);
+        }
         body->Integrate(dt);
     }
 
-    // Collision detection and resolution (circle vs. circle)
+    // Circle–circle collisions (elastic impulse)
     for (size_t i = 0; i < bodies.size(); ++i)
     {
         for (size_t j = i + 1; j < bodies.size(); ++j)
@@ -28,79 +32,64 @@ void PhysicsWorld::Step(float dt)
 
             if (A->shapeType == ShapeType::Circle && B->shapeType == ShapeType::Circle)
             {
-                // existing circle-vs-circle code (leave unchanged)
-                ...
-            }
-            else if (A->shapeType == ShapeType::Rectangle && B->shapeType == ShapeType::Rectangle)
-            {
-                Vector2D halfA = A->size * 0.5f;
-                Vector2D halfB = B->size * 0.5f;
+                Vector2D d = B->position - A->position;
+                float dist = d.Magnitude();
+                float rSum = A->radius + B->radius;
 
-                Vector2D delta = B->position - A->position;
-                float overlapX = halfA.x + halfB.x - std::abs(delta.x);
-                float overlapY = halfA.y + halfB.y - std::abs(delta.y);
-
-                if (overlapX > 0 && overlapY > 0)
+                if (dist > 0.f && dist < rSum)
                 {
-                    // Collision occurred
-                    // Resolve using the smaller overlap axis
-                    if (overlapX < overlapY)
-                    {
-                        float correction = overlapX * 0.5f * (delta.x < 0 ? -1.0f : 1.0f);
-                        A->position.x -= correction;
-                        B->position.x += correction;
+                    Vector2D n = d * (1.0f / dist); // normal
+                    float pen = rSum - dist;
 
-                        float velA = A->velocity.x;
-                        float velB = B->velocity.x;
-                        A->velocity.x = velB;
-                        B->velocity.x = velA;
-                    }
-                    else
-                    {
-                        float correction = overlapY * 0.5f * (delta.y < 0 ? -1.0f : 1.0f);
-                        A->position.y -= correction;
-                        B->position.y += correction;
+                    // separate
+                    A->position -= n * (pen * 0.5f);
+                    B->position += n * (pen * 0.5f);
 
-                        float velA = A->velocity.y;
-                        float velB = B->velocity.y;
-                        A->velocity.y = velB;
-                        B->velocity.y = velA;
+                    // relative velocity
+                    Vector2D rel = B->velocity - A->velocity;
+                    float vn = rel.Dot(n);
+                    if (vn < 0.f)
+                    {
+                        const float e = 0.5f; // restitution
+                        float j = -(1.f + e) * vn / (A->invMass + B->invMass);
+                        Vector2D impulse = n * j;
+                        A->velocity -= impulse * A->invMass;
+                        B->velocity += impulse * B->invMass;
                     }
                 }
             }
 
-            // Optionally handle Circle vs Rectangle later
+            // (You can add Rectangle–Rectangle here as needed)
         }
     }
 
-    // Wall collisions
-    for (auto body : bodies)
+    // Wall collisions (AABB in world units centered at origin)
+    for (auto *body : bodies)
     {
-        float left = -worldWidth / 2 + body->radius;
-        float right = worldWidth / 2 - body->radius;
-        float bottom = -worldHeight / 2 + body->radius;
-        float top = worldHeight / 2 - body->radius;
+        float left = -worldWidth * 0.5f + (body->shapeType == ShapeType::Circle ? body->radius : body->size.x * 0.5f);
+        float right = worldWidth * 0.5f - (body->shapeType == ShapeType::Circle ? body->radius : body->size.x * 0.5f);
+        float bottom = -worldHeight * 0.5f + (body->shapeType == ShapeType::Circle ? body->radius : body->size.y * 0.5f);
+        float top = worldHeight * 0.5f - (body->shapeType == ShapeType::Circle ? body->radius : body->size.y * 0.5f);
 
         if (body->position.x < left)
         {
             body->position.x = left;
-            body->velocity.x *= -1.0f;
+            body->velocity.x *= -1.f;
         }
-        else if (body->position.x > right)
+        if (body->position.x > right)
         {
             body->position.x = right;
-            body->velocity.x *= -1.0f;
+            body->velocity.x *= -1.f;
         }
-
         if (body->position.y < bottom)
         {
             body->position.y = bottom;
-            body->velocity.y *= -1.0f;
+            body->velocity.y *= -1.f;
         }
-        else if (body->position.y > top)
+        if (body->position.y > top)
         {
             body->position.y = top;
-            body->velocity.y *= -1.0f;
+            body->velocity.y *= -1.f;
         }
     }
 }
